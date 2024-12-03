@@ -10,35 +10,38 @@ namespace PhotosApp.Services.Authorization
 {
     public class MustOwnPhotoHandler : AuthorizationHandler<MustOwnPhotoRequirement>
     {
-        private readonly IPhotosRepository photosRepository;
-        private readonly IHttpContextAccessor httpContextAccessor;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IPhotosRepository _photosRepository;
 
         public MustOwnPhotoHandler(IPhotosRepository photosRepository, IHttpContextAccessor httpContextAccessor)
         {
-            this.photosRepository = photosRepository;
-            this.httpContextAccessor = httpContextAccessor;
+            _photosRepository = photosRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         protected override async Task HandleRequirementAsync(
             AuthorizationHandlerContext context, MustOwnPhotoRequirement requirement)
         {
             var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            // NOTE: IHttpContextAccessor позволяет получать HttpContext там, где это не получается сделать более явно.
-            var httpContext = httpContextAccessor.HttpContext;
-            // NOTE: RouteData содержит информацию о пути и параметрах запроса.
-            // Ее сформировал UseRouting и к моменту авторизации уже отработал.
+            var httpContext = _httpContextAccessor.HttpContext;
             var routeData = httpContext?.GetRouteData();
 
-            // NOTE: Использовать, если нужное условие выполняется
-            // context.Succeed(requirement);
+            var photoIdString = routeData?.Values["id"]?.ToString();
+            if (!Guid.TryParse(photoIdString, out var photoId))
+            {
+                context.Fail();
+                return;
+            }
 
-            // NOTE: Использовать, если нужное условие не выполняется
-            // context.Fail();
+            var photo = await _photosRepository.GetPhotoMetaAsync(photoId);
 
-            // NOTE: Этот метод получает информацию о фотографии, в том числе о владельце
-            // await photosRepository.GetPhotoMetaAsync(...)
+            if (photo != null && photo.OwnerId == userId)
+            {
+                context.Succeed(requirement);
+                return;
+            }
 
-            throw new NotImplementedException();
+            context.Fail();
         }
     }
 }

@@ -2,8 +2,8 @@
 {
     public class PhotoContent
     {
-        public string ContentType { get; set; }
-        public string FileName { get; set; }
-        public byte[] Content { get; set; }
+        public string ContentType { get; init; }
+        public string FileName { get; init; }
+        public byte[] Content { get; init; }
     }
 }

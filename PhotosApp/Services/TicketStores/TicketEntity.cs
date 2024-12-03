@@ -5,8 +5,7 @@ namespace PhotosApp.Services.TicketStores
 {
     public class TicketEntity
     {
-        [Key]
-        public Guid Id { get; set; }
+        [Key] public Guid Id { get; set; }
 
         public Guid UserId { get; set; }
         public byte[] Value { get; set; }

@@ -3,17 +3,15 @@
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using Microsoft.AspNetCore.DataProtection
 @using Microsoft.AspNetCore.Identity
-
-@inject IDataProtectionProvider dataProtectionProvider
-@inject ICookieManager cookieManager
+@inject IDataProtectionProvider DataProtectionProvider
+@inject ICookieManager CookieManager
 
 @{
-    var cookies = Context.Request.Cookies;
     var user = Context.User;
 
     void RenderCookieInfo(string cookieName, params string[] schemes)
     {
-        var cookieValue = cookieManager.GetRequestCookie(Context, cookieName);
+        var cookieValue = CookieManager.GetRequestCookie(Context, cookieName);
         if (cookieValue != null)
         {
             var tickets = schemes.Select(s => ExtractTicket(cookieValue, s));
@@ -40,21 +38,35 @@
         {
             <div><b>@item.Key</b>: @item.Value</div>
         }
-        <div><br /></div>
+        <div>
+            <br/>
+        </div>
 
         <h4>Identity</h4>
         RenderIdentityInfo(ticket.Principal.Identity as ClaimsIdentity);
-        <div><br /></div>
+        <div>
+            <br/>
+        </div>
     }
 
     void RenderIdentityInfo(ClaimsIdentity identity)
     {
         <div>
-            <div><b>Is authenticated:</b> @identity.IsAuthenticated</div>
-            <div><b>Authentication type:</b> @identity.AuthenticationType</div>
-            <div><b>Identity name:</b> @identity.Name</div>
-            <div><b>Role claim type:</b> @identity.RoleClaimType</div>
-            <div><b>Claims count:</b> @identity.Claims.Count()</div>
+            <div>
+                <b>Is authenticated:</b> @identity.IsAuthenticated
+            </div>
+            <div>
+                <b>Authentication type:</b> @identity.AuthenticationType
+            </div>
+            <div>
+                <b>Identity name:</b> @identity.Name
+            </div>
+            <div>
+                <b>Role claim type:</b> @identity.RoleClaimType
+            </div>
+            <div>
+                <b>Claims count:</b> @identity.Claims.Count()
+            </div>
             @foreach (var claim in identity.Claims)
             {
                 <div style="margin-left: 30px">Claim type: <b>@claim.Type</b></div>
@@ -65,7 +77,7 @@
 
     AuthenticationTicket ExtractTicket(string cookieValue, string scheme)
     {
-        var protector = dataProtectionProvider.CreateProtector(
+        var protector = DataProtectionProvider.CreateProtector(
             "Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationMiddleware",
             scheme,
             "v2");

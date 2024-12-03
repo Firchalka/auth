@@ -10,13 +10,11 @@ namespace PhotosApp.Services
         public Task<IdentityResult> ValidateAsync(UserManager<TUser> manager, TUser user, string password)
         {
             if (string.Equals(user.UserName, password, StringComparison.OrdinalIgnoreCase))
-            {
                 return Task.FromResult(IdentityResult.Failed(new IdentityError
                 {
                     Code = "UsernameAsPassword",
                     Description = "Вы не можете использовать имя пользователя в качестве пароля"
                 }));
-            }
             return Task.FromResult(IdentityResult.Success);
         }
     }

@@ -6,10 +6,8 @@ namespace PhotosApp.Models
 {
     public class AddPhotoModel
     {
-        public List<IFormFile> Files { get; set; } = new List<IFormFile>();
+        public List<IFormFile> Files { get; set; } = new();
 
-        [Required]
-        [MaxLength(150)]
-        public string Title { get; set; }
+        [Required] [MaxLength(150)] public string Title { get; set; }
     }
 }

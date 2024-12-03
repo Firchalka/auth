@@ -1,2 +1,4 @@
 PhotosApp.db
 .photos/*.new.*
+appsettings.json
+appsettings.Development.json

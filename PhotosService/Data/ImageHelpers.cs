@@ -11,17 +11,12 @@ namespace PhotosService.Data
         public static string GetContentTypeByFileName(string fileName)
         {
             var extension = Path.GetExtension(fileName)?.ToLower();
-            switch (extension)
+            return extension switch
             {
-                case ".png":
-                    return "image/png";
-                case ".gif":
-                    return "image/gif";
-                case ".jpeg":
-                case ".jpg":
-                default:
-                    return "image/jpeg";
-            }
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                _ => "image/jpeg"
+            };
         }
 
         public static string GetExtensionByBytes(byte[] content)
@@ -37,14 +32,11 @@ namespace PhotosService.Data
                     return "png";
                 case "image/gif":
                     return "gif";
-                case "image/jpeg":
                 default:
                     return "jpg";
             }
         }
 
-        // NOTE: Требуется GDI+ и System.Drawing
-        // Чтобы работало на Mac OS нужно выполнить: brew install mono-libgdiplus
         private static string GetContentTypeByBytes(byte[] content)
         {
             try

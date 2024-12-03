@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace PhotosService.Services
 {
@@ -11,10 +11,7 @@ namespace PhotosService.Services
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
 
-            if (context.Metadata.ModelType == typeof(JwtSecurityToken))
-                return new JwtSecurityTokenModelBinder();
-
-            return null;
+            return context.Metadata.ModelType == typeof(JwtSecurityToken) ? new JwtSecurityTokenModelBinder() : null;
         }
     }
 }

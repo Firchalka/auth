@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PhotosApp.Data;
@@ -11,49 +13,54 @@ using PhotosApp.Models;
 
 namespace PhotosApp.Controllers
 {
+    [Authorize]
     public class PhotosController : Controller
     {
-        private readonly IPhotosRepository photosRepository;
-        private readonly IMapper mapper;
+        private readonly IMapper _mapper;
+        private readonly IPhotosRepository _photosRepository;
 
         public PhotosController(IPhotosRepository photosRepository, IMapper mapper)
         {
-            this.photosRepository = photosRepository;
-            this.mapper = mapper;
+            _photosRepository = photosRepository;
+            _mapper = mapper;
         }
 
+        [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
             var ownerId = GetOwnerId();
-            var photoEntities = await photosRepository.GetPhotosAsync(ownerId);
-            var photos = mapper.Map<IEnumerable<Photo>>(photoEntities);
+            var photoEntities = await _photosRepository.GetPhotosAsync(ownerId);
+            var photos = _mapper.Map<IEnumerable<Photo>>(photoEntities);
 
             var model = new PhotoIndexModel(photos.ToList());
             return View(model);
         }
 
+        [Authorize("MustOwnPhoto")]
         public async Task<IActionResult> GetPhoto(Guid id)
         {
-            var photoEntity = await photosRepository.GetPhotoMetaAsync(id);
+            var photoEntity = await _photosRepository.GetPhotoMetaAsync(id);
             if (photoEntity == null)
                 return NotFound();
 
-            var photo = mapper.Map<Photo>(photoEntity);
+            var photo = _mapper.Map<Photo>(photoEntity);
 
             var model = new GetPhotoModel(photo);
             return View(model);
         }
 
-        [HttpGet("photos/{id}")]
+        [HttpGet("photos/{id:guid}")]
+        [Authorize("MustOwnPhoto")]
         public async Task<IActionResult> GetPhotoFile(Guid id)
         {
-            var photoContent = await photosRepository.GetPhotoContentAsync(id);
+            var photoContent = await _photosRepository.GetPhotoContentAsync(id);
             if (photoContent == null)
                 return NotFound();
 
             return File(photoContent.Content, photoContent.ContentType, photoContent.FileName);
         }
 
+        [Authorize(Policy = "CanAddPhoto")]
         public IActionResult AddPhoto()
         {
             return View();
@@ -61,6 +68,7 @@ namespace PhotosApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "CanAddPhoto")]
         public async Task<IActionResult> AddPhoto(AddPhotoModel addPhotoModel)
         {
             if (addPhotoModel == null || !ModelState.IsValid)
@@ -74,24 +82,26 @@ namespace PhotosApp.Controllers
             var ownerId = GetOwnerId();
 
             byte[] content;
-            using (var fileStream = file.OpenReadStream())
+            await using (var fileStream = file.OpenReadStream())
             {
                 using (var memoryStream = new MemoryStream())
                 {
-                    fileStream.CopyTo(memoryStream);
+                    await fileStream.CopyToAsync(memoryStream);
                     content = memoryStream.ToArray();
                 }
             }
 
-            if (!await photosRepository.AddPhotoAsync(title, ownerId, content))
+            if (!await _photosRepository.AddPhotoAsync(title, ownerId, content))
                 return StatusCode(StatusCodes.Status409Conflict);
 
             return RedirectToAction("Index");
         }
 
+        [Authorize(Policy = "Beta")]
+        [Authorize("MustOwnPhoto")]
         public async Task<IActionResult> EditPhoto(Guid id)
         {
-            var photo = await photosRepository.GetPhotoMetaAsync(id);
+            var photo = await _photosRepository.GetPhotoMetaAsync(id);
             if (photo == null)
                 return NotFound();
 
@@ -105,31 +115,34 @@ namespace PhotosApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Beta")]
+        [Authorize("MustOwnPhoto")]
         public async Task<IActionResult> EditPhoto(EditPhotoModel editPhotoModel)
         {
             if (editPhotoModel == null || !ModelState.IsValid)
                 return View();
 
-            var photoEntity = await photosRepository.GetPhotoMetaAsync(editPhotoModel.Id);
+            var photoEntity = await _photosRepository.GetPhotoMetaAsync(editPhotoModel.Id);
             if (photoEntity == null)
                 return NotFound();
 
-            mapper.Map(editPhotoModel, photoEntity);
+            _mapper.Map(editPhotoModel, photoEntity);
 
-            if (!await photosRepository.UpdatePhotoAsync(photoEntity))
+            if (!await _photosRepository.UpdatePhotoAsync(photoEntity))
                 return StatusCode(StatusCodes.Status409Conflict);
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
+        [Authorize("MustOwnPhoto")]
         public async Task<IActionResult> DeletePhoto(Guid id)
         {
-            var photoEntity = await photosRepository.GetPhotoMetaAsync(id);
+            var photoEntity = await _photosRepository.GetPhotoMetaAsync(id);
             if (photoEntity == null)
                 return NotFound();
 
-            if (!await photosRepository.DeletePhotoAsync(photoEntity))
+            if (!await _photosRepository.DeletePhotoAsync(photoEntity))
                 return StatusCode(StatusCodes.Status409Conflict);
 
             return RedirectToAction("Index");
@@ -137,7 +150,7 @@ namespace PhotosApp.Controllers
 
         private string GetOwnerId()
         {
-            return "a83b72ed-3f99-44b5-aa32-f9d03e7eb1fd";
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
     }
 }

@@ -9,11 +9,11 @@ namespace PhotosApp.Services.TicketStores
     public class MemoryCacheTicketStore : ITicketStore
     {
         private const string KeyPrefix = "AuthSessionStore-";
-        private readonly IMemoryCache cache;
+        private readonly IMemoryCache _cache;
 
         public MemoryCacheTicketStore()
         {
-            cache = new MemoryCache(new MemoryCacheOptions());
+            _cache = new MemoryCache(new MemoryCacheOptions());
         }
 
         public async Task<string> StoreAsync(AuthenticationTicket ticket)
@@ -28,26 +28,23 @@ namespace PhotosApp.Services.TicketStores
         {
             var options = new MemoryCacheEntryOptions();
             var expiresUtc = ticket.Properties.ExpiresUtc;
-            if (expiresUtc.HasValue)
-            {
-                options.SetAbsoluteExpiration(expiresUtc.Value);
-            }
+            if (expiresUtc.HasValue) options.SetAbsoluteExpiration(expiresUtc.Value);
             options.SetSlidingExpiration(TimeSpan.FromHours(1));
 
-            cache.Set(key, ticket, options);
+            _cache.Set(key, ticket, options);
 
             return Task.FromResult(0);
         }
 
         public Task<AuthenticationTicket> RetrieveAsync(string key)
         {
-            cache.TryGetValue(key, out AuthenticationTicket ticket);
+            _cache.TryGetValue(key, out AuthenticationTicket ticket);
             return Task.FromResult(ticket);
         }
 
         public Task RemoveAsync(string key)
         {
-            cache.Remove(key);
+            _cache.Remove(key);
             return Task.FromResult(0);
         }
     }

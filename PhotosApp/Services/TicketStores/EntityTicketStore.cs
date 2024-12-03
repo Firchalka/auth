@@ -9,11 +9,11 @@ namespace PhotosApp.Services.TicketStores
 {
     public class EntityTicketStore : ITicketStore
     {
-        private readonly DbContextOptions<TicketsDbContext> dbContextOptions;
+        private readonly DbContextOptions<TicketsDbContext> _dbContextOptions;
 
         public EntityTicketStore(DbContextOptions<TicketsDbContext> dbContextOptions)
         {
-            this.dbContextOptions = dbContextOptions;
+            _dbContextOptions = dbContextOptions;
         }
 
         public async Task RemoveAsync(string key)
@@ -21,7 +21,7 @@ namespace PhotosApp.Services.TicketStores
             if (!Guid.TryParse(key, out var id))
                 return;
 
-            using (var dbContext = new TicketsDbContext(dbContextOptions))
+            await using (var dbContext = new TicketsDbContext(_dbContextOptions))
             {
                 var ticketEntity = await dbContext.Tickets.SingleOrDefaultAsync(x => x.Id == id);
                 if (ticketEntity != null)
@@ -37,7 +37,7 @@ namespace PhotosApp.Services.TicketStores
             if (!Guid.TryParse(key, out var id))
                 return;
 
-            using (var dbContext = new TicketsDbContext(dbContextOptions))
+            await using (var dbContext = new TicketsDbContext(_dbContextOptions))
             {
                 var ticketEntity = await dbContext.Tickets.FindAsync(id);
                 if (ticketEntity != null)
@@ -55,7 +55,7 @@ namespace PhotosApp.Services.TicketStores
             if (!Guid.TryParse(key, out var id))
                 return null;
 
-            using (var dbContext = new TicketsDbContext(dbContextOptions))
+            await using (var dbContext = new TicketsDbContext(_dbContextOptions))
             {
                 var ticketEntity = await dbContext.Tickets.FindAsync(id);
                 if (ticketEntity != null)
@@ -65,6 +65,7 @@ namespace PhotosApp.Services.TicketStores
 
                     return DeserializeFromBytes(ticketEntity.Value);
                 }
+
                 return null;
             }
         }
@@ -76,16 +77,13 @@ namespace PhotosApp.Services.TicketStores
             {
                 UserId = userId,
                 LastActivity = DateTimeOffset.UtcNow,
-                Value = SerializeToBytes(ticket),
+                Value = SerializeToBytes(ticket)
             };
 
             var expiresUtc = ticket.Properties.ExpiresUtc;
-            if (expiresUtc.HasValue)
-            {
-                authenticationTicket.Expires = expiresUtc.Value;
-            }
+            if (expiresUtc.HasValue) authenticationTicket.Expires = expiresUtc.Value;
 
-            using (var dbContext = new TicketsDbContext(dbContextOptions))
+            await using (var dbContext = new TicketsDbContext(_dbContextOptions))
             {
                 await dbContext.Tickets.AddAsync(authenticationTicket);
                 await dbContext.SaveChangesAsync();
@@ -95,9 +93,13 @@ namespace PhotosApp.Services.TicketStores
         }
 
         private byte[] SerializeToBytes(AuthenticationTicket source)
-            => TicketSerializer.Default.Serialize(source);
+        {
+            return TicketSerializer.Default.Serialize(source);
+        }
 
         private AuthenticationTicket DeserializeFromBytes(byte[] source)
-            => source == null ? null : TicketSerializer.Default.Deserialize(source);
+        {
+            return source == null ? null : TicketSerializer.Default.Deserialize(source);
+        }
     }
 }
